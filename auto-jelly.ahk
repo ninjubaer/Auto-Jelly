@@ -14,6 +14,9 @@
 #include %A_ScriptDir%\lib\Roblox.ahk
 #include %A_ScriptDir%\lib\Gdip_ImageSearch.ahk
 ;==================================
+CoordMode('Pixel', 'Screen')
+CoordMode('Mouse', 'Screen')
+;==================================
 pToken := Gdip_Startup()
 OnExit((*) =>( Gdip_Shutdown(pToken), closefunction(), ExitApp() ), -1)
 OnError (e, mode) => (mode = "Return") ? -1 : 0
