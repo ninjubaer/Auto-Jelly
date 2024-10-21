@@ -1,0 +1,5 @@
+﻿settings
+*.test.*
+*.temp.*
+testoutput
+.vscode
