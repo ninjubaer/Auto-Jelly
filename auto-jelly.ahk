@@ -13,11 +13,13 @@
 #Include %A_ScriptDir%\lib\Gdip_All.ahk
 #include %A_ScriptDir%\lib\Roblox.ahk
 #include %A_ScriptDir%\lib\Gdip_ImageSearch.ahk
+#include %A_ScriptDir%\lib\Gdip_PixelSearch.ahk
+#Include %A_ScriptDir%\lib\OCR.ahk
 ;==================================
 CoordMode('Pixel', 'Screen')
 CoordMode('Mouse', 'Screen')
 ;==================================
-pToken := Gdip_Startup()
+pToken := Gdip_Startup(), autoNeonberry := 0, neonberryX := 0, neonberryY := 0
 OnExit((*) =>( Gdip_Shutdown(pToken), closefunction(), ExitApp() ), -1)
 OnError (e, mode) => (mode = "Return") ? -1 : 0
 stopToggle(*) {
@@ -85,7 +87,7 @@ getConfig() {
 		},
 		extrasettings: {
 			mythicStop: 0,
-			giftedStop: 0
+			giftedStop: 0,
 		}
 	}
 	for i, section in config.OwnProps()
@@ -114,7 +116,7 @@ getConfig() {
 	(f:=FileOpen(inipath, "w")).Write(ini), f.Close()
 }
 ;===Dimensions===
-w:=500,h:=397
+w:=500,h:=437
 ;===Bee Array===
 beeArr := ["Bomber", "Brave", "Bumble", "Cool", "Hasty", "Looker", "Rad", "Rascal", "Stubborn", "Bubble", "Bucko", "Commander", "Demo", "Exhausted", "Fire", "Frosty", "Honey", "Rage", "Riley", "Shocked", "Baby", "Carpenter", "Demon", "Diamond", "Lion", "Music", "Ninja", "Shy", "Buoyant", "Fuzzy", "Precise", "Spicy", "Tadpole", "Vector"]
 mutationsArr := [
@@ -145,7 +147,8 @@ startGui() {
 		{name:"mutations", options:"x" w-170 " y220 w40 h18"}, 
 		{name:"close", options:"x" w-40 " y5 w28 h28"}, 
 		{name:"roll", options:"x10 y" h-42 " w" w-56 " h30"},
-		{name:"help", options:"x" w-40 " y" h-42 " w28 h28"}
+		{name:"help", options:"x" w-40 " y" h-42 " w28 h28"},
+        {name:"neonberry", options:"x10 y" h-80 " w" w/2-14 " h30"}
 	]
 		mgui.AddText("v" j.name " " j.options)
 	for i, j in beeArr {
@@ -157,7 +160,7 @@ startGui() {
 		mgui.AddText("v" j.name " x" 10+mod(A_Index-1,4)*120 " y" 260+y*25 " w40 h18")
 	}
 	for i, j in extrasettings {
-		x := 10 + (w-12)/extrasettings.length * (i-1), y:=(316+h-42)//2-10
+		x := 10 + (w-12)/extrasettings.length * (i-1), y:=(316+h-82)//2-10
 		mgui.AddText("v" j.name " x" x " y" y " w40 h18")
 	}
 	hBM := CreateDIBSection(w, h)
@@ -174,6 +177,7 @@ startGui() {
 startGUI()
 OnMessage(0x201, WM_LBUTTONDOWN)
 OnMessage(0x200, WM_MOUSEMOVE)
+OnMessage(0x20, (*)=>0)
 DrawGUI() {
 	Gdip_GraphicsClear(G)
 	Gdip_FillRoundedRectanglePath(G, brush := Gdip_BrushCreateSolid(0xFF131416), 2, 2, w-4, h-4, 20), Gdip_DeleteBrush(brush)
@@ -230,7 +234,7 @@ DrawGUI() {
 	Gdip_DrawLine(G, Pen:=Gdip_CreatePen("0xFFFEC6DF", 2), 10, 315, w-12, 315), Gdip_DeletePen(Pen)
 	;two more switches for "stop on mythic" and "stop on gifted"
 	for i, j in extrasettings {
-		x := 10 + (tw:=(w-12)/extrasettings.length) * (i-1), y:=(316+h-42)//2-10
+		x := 10 + (tw:=(w-12)/extrasettings.length) * (i-1), y:=(316+h-82)//2-10
 		Gdip_FillRoundedRectanglePath(G, brush:=Gdip_BrushCreateSolid("0xFF262832"), x, y, 40, 18, 9), Gdip_DeleteBrush(brush), Gdip_DeleteBrush(brush)
 		Gdip_FillEllipse(G, brush:=Gdip_BrushCreateSolid("0xFFFEC6DF"), %j.name% ? x+18 : x-2, y-2, 22, 22)
 		Gdip_TextToGraphics(G, j.text, "s14 x" x+46 " y" y " vCenter c" brush, "Comic Sans MS", tw,20), Gdip_DeleteBrush(brush)
@@ -246,9 +250,15 @@ DrawGUI() {
 		Gdip_FillRoundedRectanglePath(G, brush:=Gdip_BrushCreateSolid("0x30FEC6DF"), 10, h-42, w-56, 30, 10), Gdip_DeleteBrush(brush)
 	if hovercontrol = "help"
 		Gdip_FillRoundedRectanglePath(G, brush:=Gdip_BrushCreateSolid("0x30FEC6DF"), w-40, h-42, 30, 30, 10), Gdip_DeleteBrush(brush)
+    if hovercontrol = "neonberry"
+        Gdip_FillRoundedRectanglePath(G, brush:=Gdip_BrushCreateSolid("0x30FEC6DF"), 10, h-80, w/2-14, 30, 10), Gdip_DeleteBrush(brush)
 	Gdip_TextToGraphics(G, "Roll!", "x10 y" h-40 " Center vCenter s15 c" (brush:=Gdip_BrushCreateSolid("0xFFFEC6DF")),"Comic Sans MS",w-56, 28)
+    Gdip_TextToGraphics(G, "Auto-neonberry: " (autoNeonberry ? "On" : "Off"), "x10 y" h-80 " Center vCenter s15 c" brush,"Comic Sans MS",w/2-14, 28)
+    Gdip_TextToGraphics(G, "cool feature coming soon™", "x" w/2+4 " y" h-80 " Center vCenter s15 c" brush,"Comic Sans MS",w/2-14, 28)
 	Gdip_TextToGraphics(G, "?", "x" w-39 " y" h-40 " Center vCenter s15 c" brush,"Comic Sans MS",30, 28), Gdip_DeleteBrush(brush)
 	Gdip_DrawRoundedRectanglePath(G, pen:=Gdip_CreatePen("0xFFFEC6DF", 4), 10, h-42, w-56, 30, 10)
+    Gdip_DrawRoundedRectanglePath(G, pen, 10, h-82, w/2-14, 30, 10)
+    Gdip_DrawRoundedRectanglePath(G, pen, w/2+4, h-82, w/2-14, 30, 10)
 	Gdip_DrawRoundedRectanglePath(G, pen, w-40, h-42, 30, 30, 10), Gdip_DeletePen(pen)
 	update()
 }
@@ -257,7 +267,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
 	, Stubborn, Bubble, Bucko, Commander, Demo, Exhausted, Fire, Frosty, Honey, Rage
 	, Riley, Shocked, Baby, Carpenter, Demon, Diamond, Lion, Music, Ninja, Shy, Buoyant
 	, Fuzzy, Precise, Spicy, Tadpole, Vector, SelectAll, Ability, Gather, Convert, Energy
-	, Movespeed, Crit, Instant, Attack, mythicStop, giftedStop
+	, Movespeed, Crit, Instant, Attack, mythicStop, giftedStop, autoNeonberry, neonberryX, neonberryY
 	MouseGetPos(,,,&ctrl,2)
 	if !ctrl
 		return
@@ -271,10 +281,8 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
 			if ctrl = ctrl2
 				PostMessage(0x0112,0xF060)
 		case "roll":
-			ReplaceSystemCursors()
 			blc_start()
 		case "help":
-			ReplaceSystemCursors()	
 			Msgbox("- Select the bees and mutations you want`n- put a neonberry on the bee you want to change`n- make sure your in-game Auto-Jelly settings are right`n- use one royal jelly on the bee and click yes.`n`nThen click on Roll.`nTo stop press the escape key`n`nStops:`n- GiftedStop stops on any gifted bee ignoring the`n  mutation and your bee selection`n- MythicStop stops on any gifted bee ignoring the`n  mutation and your bee selection", "Auto-Jelly Help", "0x40040")
 		case "selectAll":
 			IniWrite(%mgui[ctrl].name% ^= 1, ".\settings\mutations.ini", "bees", mgui[ctrl].name)
@@ -288,56 +296,62 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
 			IniWrite(%mgui[ctrl].name% ^= 1, ".\settings\mutations.ini", "extrasettings", mgui[ctrl].name)
 		case "mutations":
 			IniWrite(%mgui[ctrl].name% ^= 1, ".\settings\mutations.ini", "mutations", mgui[ctrl].name)
+        case "neonberry":
+            if !autoNeonberry && msgbox("When enabled, the macro will automatically put a neonberry on the bee you want to change if mutations are enabled. When using this, make sure you have neonberries in your inventory and not to touch your keyboard or mouse while the macro is running.`nDo you want to proceed?", "Auto-Jelly", 0x40134) = "yes" {
+                if MsgBox("Click on the bee you want to change and the macro will do the rest!`n`nRemember to have neonberries in your inventory and not to touch your keyboard or mouse while the macro is running.`nPress 'Okay' to proceed", "Auto-Jelly", 0x40041) = "OK" {
+                    GetNeonberryPos()
+                }
+            }
+            else
+                autoNeonberry := 0, neonberryX := 0, neonberryY := 0
+
+
 		default:
 			if mutations
 				IniWrite(%mgui[ctrl].name% ^= 1, ".\settings\mutations.ini", "mutations", mgui[ctrl].name)
 	}
 	DrawGUI()
 }
+GetNeonberryPos() {
+    global autoNeonberry, neonberryX, neonberryY
+    mgui.Hide()
+    nGUI := Gui("+E" (0x08080000) " +OwnDialogs -Caption -DPIScale", "Auto-Jelly")
+/*     if !GetRobloxClientPos() || !windowWidth
+        return msgbox("You must have Bee Swarm Simulator open to use this!", "Auto-Jelly", 0x40030) */
+    windowX:=0,windowY:=0,windowWidth:=A_ScreenWidth,windowHeight:=A_ScreenHeight
+    nGUI.Show()
+    hBM := CreateDIBSection(windowWidth, windowHeight)
+    hDC := CreateCompatibleDC()
+    SelectObject(hDC, hBM)
+    G := Gdip_GraphicsFromHDC(hDC)
+    Gdip_GraphicsClear(G, 0x88000000)
+    Gdip_SetSmoothingMode(G, 4)
+    Gdip_SetInterpolationMode(G, 7)
+    update := UpdateLayeredWindow.Bind(nGUI.hwnd, hDC)
+    update(windowX, windowY, windowWidth, windowHeight)
+    KeyWait("LButton", "D")
+    MouseGetPos(&x, &y) 
+    nGUI.Destroy()
+    mgui.Show()
+    autoNeonberry:=1, neonberryX:=x, neonberryY:=y
+}
 WM_MOUSEMOVE(wParam, lParam, msg, hwnd) {
 	global
 	local ctrl, hover_ctrl
+    static IDC_HAND := DllCall("LoadCursor", "Ptr", 0, "UInt", 32649, "Ptr"), IDC_ARROW := DllCall("LoadCursor", "Ptr", 0, "UInt", 32512, "Ptr"), current := 0, _ := (DllCall("SetCursor", "Ptr", IDC_ARROW, "Ptr"), 0)
 	MouseGetPos(,,,&ctrl,2)
-	if !ctrl || mgui["move"].hwnd = ctrl || mgui["close"].hwnd = ctrl
-		return
-	ReplaceSystemCursors("IDC_HAND")
+	if !ctrl || mgui["move"].hwnd = ctrl || mgui["close"].hwnd = ctrl || (!mutations && !!find(mutationsArr, (j) => j.name = mgui[ctrl].name))
+		return ((current ? DllCall("SetCursor", "Ptr", IDC_ARROW, "Ptr") : 0), current := 0)
+    if !current
+    	current := (DllCall("SetCursor", "Ptr", IDC_HAND),1)
 	hovercontrol := mgui[ctrl].name
 	hover_ctrl := mgui[ctrl].hwnd
 	DrawGUI()
 	while ctrl = hover_ctrl
 		sleep(20),MouseGetPos(,,,&ctrl,2)
 	hovercontrol := ""
-	ReplaceSystemCursors()
+    current := 0, DllCall("SetCursor", "Ptr", IDC_ARROW, "Ptr")
 	DrawGUI()
-}
-ReplaceSystemCursors(IDC := "")
-{
-	static IMAGE_CURSOR := 2, SPI_SETCURSORS := 0x57
-		, SysCursors := Map(  "IDC_APPSTARTING", 32650
-							, "IDC_ARROW"      , 32512
-							, "IDC_CROSS"      , 32515
-							, "IDC_HAND"       , 32649
-							, "IDC_HELP"       , 32651
-							, "IDC_IBEAM"      , 32513
-							, "IDC_NO"         , 32648
-							, "IDC_SIZEALL"    , 32646
-							, "IDC_SIZENESW"   , 32643
-							, "IDC_SIZENWSE"   , 32642
-							, "IDC_SIZEWE"     , 32644
-							, "IDC_SIZENS"     , 32645
-							, "IDC_UPARROW"    , 32516
-							, "IDC_WAIT"       , 32514 )
-	if !IDC
-		DllCall("SystemParametersInfo", "UInt", SPI_SETCURSORS, "UInt", 0, "UInt", 0, "UInt", 0)
-	else
-	{
-		hCursor := DllCall("LoadCursor", "Ptr", 0, "UInt", SysCursors[IDC], "Ptr")
-		for k, v in SysCursors
-		{
-			hCopy := DllCall("CopyImage", "Ptr", hCursor, "UInt", IMAGE_CURSOR, "Int", 0, "Int", 0, "UInt", 0, "Ptr")
-			DllCall("SetSystemCursor", "Ptr", hCopy, "UInt", v)
-		}
-	}
 }
 blc_start() {
 	global stopping:=false
@@ -422,9 +436,14 @@ blc_start() {
 			}
 		}
 		Gdip_DisposeImage(pBitmap)
-		if !found
+        pBitmap := Gdip_BitmapFromScreen(windowX + Round(0.5 * windowWidth - 320) "|" windowY + yOffset + Round(0.4 * windowHeight + 17) "|210|90")
+        if autoNeonberry && Gdip_PixelSearch(pBitmap, 0xFF276339)
+            ;add neonberry here
+        
+		if !found {
+            Gdip_DisposeImage(pBitmap)
 			continue
-		pBitmap := Gdip_BitmapFromScreen(windowX + Round(0.5 * windowWidth - 320) "|" windowY + yOffset + Round(0.4 * windowHeight + 17) "|210|90")
+        }
 		pEffect := Gdip_CreateEffect(5, -60,30)
 		Gdip_BitmapApplyEffect(pBitmap, pEffect)
 		Gdip_DisposeEffect(pEffect)
@@ -446,9 +465,13 @@ blc_start() {
 	hotkey "~*esc", stopToggle, "Off"
 	mgui.show()
 }
+find(arr, function) {
+    for i, j in arr
+        if function(j)
+            return j
+}
 closeFunction(*) {
 	global xPos, yPos
-	ReplaceSystemCursors()
 	try {
 		mgui.getPos(&xp, &yp)
 		if !(xp < 0) && !(xp > A_ScreenWidth) && !(yp < 0) && !(yp > A_ScreenHeight)
@@ -457,179 +480,6 @@ closeFunction(*) {
 		IniWrite(ypos, ".\settings\mutations.ini", "GUI", "ypos")
 	}
 }
-HBitmapToRandomAccessStream(hBitmap) {
-	static IID_IRandomAccessStream := "{905A0FE1-BC53-11DF-8C49-001E4FC686DA}"
-			, IID_IPicture            := "{7BF80980-BF32-101A-8BBB-00AA00300CAB}"
-			, PICTYPE_BITMAP := 1
-			, BSOS_DEFAULT   := 0
-			, sz := 8 + A_PtrSize * 2
-
-	DllCall("Ole32\CreateStreamOnHGlobal", "Ptr", 0, "UInt", true, "PtrP", &pIStream:=0, "UInt")
-
-	PICTDESC := Buffer(sz, 0)
-	NumPut("uint", sz
-		, "uint", PICTYPE_BITMAP
-		, "ptr", hBitmap, PICTDESC)
-
-	riid := CLSIDFromString(IID_IPicture)
-	DllCall("OleAut32\OleCreatePictureIndirect", "Ptr", PICTDESC, "Ptr", riid, "UInt", false, "PtrP", &pIPicture:=0, "UInt")
-	; IPicture::SaveAsFile
-	ComCall(15, pIPicture, "Ptr", pIStream, "UInt", true, "UIntP", &size:=0, "UInt")
-	riid := CLSIDFromString(IID_IRandomAccessStream)
-	DllCall("ShCore\CreateRandomAccessStreamOverStream", "Ptr", pIStream, "UInt", BSOS_DEFAULT, "Ptr", riid, "PtrP", &pIRandomAccessStream:=0, "UInt")
-	ObjRelease(pIPicture)
-	ObjRelease(pIStream)
-	Return pIRandomAccessStream
-}
-
-CLSIDFromString(IID, &CLSID?) {
-	CLSID := Buffer(16)
-	if res := DllCall("ole32\CLSIDFromString", "WStr", IID, "Ptr", CLSID, "UInt")
-	throw Error("CLSIDFromString failed. Error: " . Format("{:#x}", res))
-	Return CLSID
-}
-
-ocr(file, lang := "FirstFromAvailableLanguages")
-{
-	static OcrEngineStatics, OcrEngine, MaxDimension, LanguageFactory, Language, CurrentLanguage:="", BitmapDecoderStatics, GlobalizationPreferencesStatics
-	if !IsSet(OcrEngineStatics)
-	{
-		CreateClass("Windows.Globalization.Language", ILanguageFactory := "{9B0252AC-0C27-44F8-B792-9793FB66C63E}", &LanguageFactory)
-		CreateClass("Windows.Graphics.Imaging.BitmapDecoder", IBitmapDecoderStatics := "{438CCB26-BCEF-4E95-BAD6-23A822E58D01}", &BitmapDecoderStatics)
-		CreateClass("Windows.Media.Ocr.OcrEngine", IOcrEngineStatics := "{5BFFA85A-3384-3540-9940-699120D428A8}", &OcrEngineStatics)
-		ComCall(6, OcrEngineStatics, "uint*", &MaxDimension:=0)
-	}
-	text := ""
-	if (file = "ShowAvailableLanguages")
-	{
-		if !IsSet(GlobalizationPreferencesStatics)
-			CreateClass("Windows.System.UserProfile.GlobalizationPreferences", IGlobalizationPreferencesStatics := "{01BF4326-ED37-4E96-B0E9-C1340D1EA158}", &GlobalizationPreferencesStatics)
-		ComCall(9, GlobalizationPreferencesStatics, "ptr*", &LanguageList:=0)   ; get_Languages
-		ComCall(7, LanguageList, "int*", &count:=0)   ; count
-		loop count
-		{
-			ComCall(6, LanguageList, "int", A_Index-1, "ptr*", &hString:=0)   ; get_Item
-			ComCall(6, LanguageFactory, "ptr", hString, "ptr*", &LanguageTest:=0)   ; CreateLanguage
-			ComCall(8, OcrEngineStatics, "ptr", LanguageTest, "int*", &bool:=0)   ; IsLanguageSupported
-			if (bool = 1)
-			{
-				ComCall(6, LanguageTest, "ptr*", &hText:=0)
-				b := DllCall("Combase.dll\WindowsGetStringRawBuffer", "ptr", hText, "uint*", &length:=0, "ptr")
-				text .= StrGet(b, "UTF-16") "`n"
-			}
-			ObjRelease(LanguageTest)
-		}
-		ObjRelease(LanguageList)
-		return text
-	}
-	if (lang != CurrentLanguage) or (lang = "FirstFromAvailableLanguages")
-	{
-		if IsSet(OcrEngine)
-		{
-			ObjRelease(OcrEngine)
-			if (CurrentLanguage != "FirstFromAvailableLanguages")
-				ObjRelease(Language)
-		}
-		if (lang = "FirstFromAvailableLanguages")
-			ComCall(10, OcrEngineStatics, "ptr*", &OcrEngine:=0)   ; TryCreateFromUserProfileLanguages
-		else
-		{
-			CreateHString(lang, &hString)
-			ComCall(6, LanguageFactory, "ptr", hString, "ptr*", &Language:=0)   ; CreateLanguage
-			DeleteHString(hString)
-			ComCall(9, OcrEngineStatics, "ptr", Language, "ptr*", &OcrEngine:=0)   ; TryCreateFromLanguage
-		}
-		if (OcrEngine = 0)
-		{
-			msgbox 'Can not use language "' lang '" for OCR, please install language pack.'
-			ExitApp
-		}
-		CurrentLanguage := lang
-	}
-	IRandomAccessStream := file
-	ComCall(14, BitmapDecoderStatics, "ptr", IRandomAccessStream, "ptr*", &BitmapDecoder:=0)   ; CreateAsync
-	WaitForAsync(&BitmapDecoder)
-	BitmapFrame := ComObjQuery(BitmapDecoder, IBitmapFrame := "{72A49A1C-8081-438D-91BC-94ECFC8185C6}")
-	ComCall(12, BitmapFrame, "uint*", &width:=0)   ; get_PixelWidth
-	ComCall(13, BitmapFrame, "uint*", &height:=0)   ; get_PixelHeight
-	if (width > MaxDimension) or (height > MaxDimension)
-	{
-		msgbox "Image is to big - " width "x" height ".`nIt should be maximum - " MaxDimension " pixels"
-		ExitApp
-	}
-	BitmapFrameWithSoftwareBitmap := ComObjQuery(BitmapDecoder, IBitmapFrameWithSoftwareBitmap := "{FE287C9A-420C-4963-87AD-691436E08383}")
-	ComCall(6, BitmapFrameWithSoftwareBitmap, "ptr*", &SoftwareBitmap:=0)   ; GetSoftwareBitmapAsync
-	WaitForAsync(&SoftwareBitmap)
-	ComCall(6, OcrEngine, "ptr", SoftwareBitmap, "ptr*", &OcrResult:=0)   ; RecognizeAsync
-	WaitForAsync(&OcrResult)
-	ComCall(6, OcrResult, "ptr*", &LinesList:=0)   ; get_Lines
-	ComCall(7, LinesList, "int*", &count:=0)   ; count
-	loop count
-	{
-		ComCall(6, LinesList, "int", A_Index-1, "ptr*", &OcrLine:=0)
-		ComCall(7, OcrLine, "ptr*", &hText:=0)
-		buf := DllCall("Combase.dll\WindowsGetStringRawBuffer", "ptr", hText, "uint*", &length:=0, "ptr")
-		text .= StrGet(buf, "UTF-16") "`n"
-		ObjRelease(OcrLine)
-	}
-	Close := ComObjQuery(IRandomAccessStream, IClosable := "{30D5A829-7FA4-4026-83BB-D75BAE4EA99E}")
-	ComCall(6, Close)   ; Close
-	Close := ComObjQuery(SoftwareBitmap, IClosable := "{30D5A829-7FA4-4026-83BB-D75BAE4EA99E}")
-	ComCall(6, Close)   ; Close
-	ObjRelease(IRandomAccessStream)
-	ObjRelease(BitmapDecoder)
-	ObjRelease(SoftwareBitmap)
-	ObjRelease(OcrResult)
-	ObjRelease(LinesList)
-	return text
-}
-
-CreateClass(str, interface, &Class)
-{
-	CreateHString(str, &hString)
-	GUID := CLSIDFromString(interface)
-	result := DllCall("Combase.dll\RoGetActivationFactory", "ptr", hString, "ptr", GUID, "ptr*", &Class:=0)
-	if (result != 0)
-	{
-		if (result = 0x80004002)
-			msgbox "No such interface supported"
-		else if (result = 0x80040154)
-			msgbox "Class not registered"
-		else
-			msgbox "error: " result
-	}
-	DeleteHString(hString)
-}
-
-CreateHString(str, &hString)
-{
-	DllCall("Combase.dll\WindowsCreateString", "wstr", str, "uint", StrLen(str), "ptr*", &hString:=0)
-}
-
-DeleteHString(hString)
-{
-	DllCall("Combase.dll\WindowsDeleteString", "ptr", hString)
-}
-
-WaitForAsync(&Object)
-{
-	AsyncInfo := ComObjQuery(Object, IAsyncInfo := "{00000036-0000-0000-C000-000000000046}")
-	loop
-	{
-		ComCall(7, AsyncInfo, "uint*", &status:=0)   ; IAsyncInfo.Status
-		if (status != 0)
-		{
-			if (status != 1)
-			{
-				ComCall(8, AsyncInfo, "uint*", &ErrorCode:=0)   ; IAsyncInfo.ErrorCode
-				msgbox "AsyncInfo status error: " ErrorCode
-				ExitApp
-			}
-			break
-		}
-		sleep 10
-	}
-	ComCall(8, Object, "ptr*", &ObjectResult:=0)   ; GetResults
-	ObjRelease(Object)
-	Object := ObjectResult
+openInventory() {
+    
 }
