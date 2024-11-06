@@ -424,12 +424,14 @@ blc_start() {
 		}
 		Gdip_DisposeImage(pBitmap)
 		pBitmap := Gdip_BitmapFromScreen(windowX + Round(0.5 * windowWidth - 320) "|" windowY + yOffset + Round(0.4 * windowHeight + 17) "|210|90")
-		if autoNeonberry && !Gdip_PixelSearch(pBitmap, 0xFF276339)
-		;add neonberry here
-			if !found {
-				Gdip_DisposeImage(pBitmap)
-				continue
-			}
+		if !found {
+            if autoNeonberry && !Gdip_PixelSearch(pBitmap, 0xFF276339) {
+                Click(windowX + Round(0.5 * windowWidth) " " windowY + yOffset + Round(0.5 * windowHeight)) ; close the bee info
+                placeNeonberry()
+            }
+			Gdip_DisposeImage(pBitmap)
+			continue
+		}
 		pEffect := Gdip_CreateEffect(5, -60, 30)
 		Gdip_BitmapApplyEffect(pBitmap, pEffect)
 		Gdip_DisposeEffect(pEffect)
@@ -443,8 +445,15 @@ blc_start() {
 					found := 1
 					break
 				}
-		if !found
-			continue
+		if !found {
+            if autoNeonberry && !Gdip_PixelSearch(pBitmap, 0xFF276339) {
+                Click(windowX + Round(0.5 * windowWidth) " " windowY + yOffset + Round(0.5 * windowHeight)) ; close the bee info
+                placeNeonberry()
+            }
+            Gdip_DisposeImage(pBitmap)
+            continue
+        }
+        Gdip_DisposeImage(pBitmap)
 		if msgbox("Found a match!`nDo you want to keep this?", "Auto-Jelly!", 0x40024) = "Yes"
 			break
 	}
@@ -468,22 +477,54 @@ closeFunction(*) {
 	}
 	ExitApp()
 }
-openInventory(open?) {
-	yOffset := GetYOffset(), GetRobloxClientPos()
-	pBitmap := Gdip_BitmapFromScreen(windowX "|" windowY + yOffset + 72 "|350|80")
-	if IsSet(open) && !open
-		return Gdip_ImageSearch(pBitmap, bitmaps["Inventory"]) && Click(windowx+30, )
-
+placeNeonberry() {
+    ActivateRoblox()
+    GetRobloxClientPos(), yOffset:=GetYOffset()
+    if openInventory()
+        sleep 300
+    MouseMove(windowX + 30 , windowY + yOffset + 200)
+    loop 50
+        Send "{WheelDown 50}"
+    msgbox "done"
+    loop 25 {
+        Send "{WheelUp 50}"
+        sleep 500
+        pBitmap := Gdip_BitmapFromScreen(windowX "|" windowY+yOffset+175 "|80|" windowHeight - yOffset - 175)
+        if Gdip_ImageSearch(pBitmap, bitmaps["Neonberry"],&pos,,,,,2) {
+            Gdip_DisposeImage(pBitmap)
+            x:=SubStr(pos,1,InStr(pos, ",")-1), y:=SubStr(pos,InStr(pos, ",")+1)
+            MouseMove(windowX + x, windowY + yOffset + 175 + y)
+            Send "{Click Down}"
+            MouseMove neonberryX, neonberryY
+            Send "{Click Up}"
+            return 1
+        }
+        Gdip_DisposeImage(pBitmap)
+    }
+    openInventory(close:=0) {
+        pBitmap := Gdip_BitmapFromScreen(windowX "|" windowY+yOffset+70 "|70|70")
+        if (close && Gdip_ImageSearch(pBitmap, bitmaps["Inventory"], ,,,,, 2)) || (!close && !Gdip_ImageSearch(pBitmap, bitmaps["Inventory"], ,,,,, 2))
+            return(Click(windowX+30 " " windowY+yOffset+95), Gdip_DisposeImage(pBitmap), 1)
+        Gdip_DisposeImage(pBitmap)
+        return 0
+    }
 }
 
 HookProc(ncode, wParam, lParam, extraParam?) {
-	if !(wParam = 0x200 || wParam = 0x100)
+	if !(wParam = 0x200 || wParam = 0x100 || wParam = 0x20A)
 		return 0
+    if wParam = 0x20A {
+        DllCall("UnhookWindowsHookEx", "ptr", MouseHook), DllCall("UnhookWindowsHookEx", "ptr", KeyboardHook)
+        Hotkey "~*esc", stopToggle, "Off"
+        msgbox("Detected mouse input!`nMacro was Interrupted and will not continue rolling","Auto-Jelly", "0x40030")
+        stopToggle()
+    }
 	if wParam = 0x200 {
 		if !GetKeyState("RButton")
 			return 0
 		DllCall("UnhookWindowsHookEx", "ptr", MouseHook), DllCall("UnhookWindowsHookEx", "ptr", KeyboardHook)
 		Hotkey "~*esc", stopToggle, "Off"
+        msgbox("Detected mouse input!`nMacro was Interrupted and will not continue rolling","Auto-Jelly", "0x40030")
 		stopToggle()
 	}
 	switch k := GetKeyName(Format("vk{:x}", NumGet(lParam, "uint"))), 0 {
@@ -497,6 +538,13 @@ HookProc(ncode, wParam, lParam, extraParam?) {
 			Hotkey "~*esc", stopToggle, "Off"
 			msgbox("Detected keyboard input!`nMacro was Interrupted and will not continue rolling","Auto-Jelly", "0x40030")
 			stopToggle()
+        case "tab":
+            if !(GetKeyState("Alt"))
+                return 0
+            DllCall("UnhookWindowsHookEx", "ptr", MouseHook), DllCall("UnhookWindowsHookEx", "ptr", KeyboardHook)
+            Hotkey "~*esc", stopToggle, "Off"
+            MsgBox("Detected keyboard input!`nMacro was Interrupted and will not continue rolling","Auto-Jelly", "0x40030")
+            stopToggle()
 	}
 }
 
