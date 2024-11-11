@@ -9,6 +9,7 @@
 #SingleInstance Force
 #Requires AutoHotkey v2.0
 #Warn VarUnset, Off
+#MaxThreads 255
 ;=============INCLUDES=============
 #Include %A_ScriptDir%\lib\Gdip_All.ahk
 #include %A_ScriptDir%\lib\Roblox.ahk
@@ -19,19 +20,20 @@
 ;==================================
 CoordMode('Pixel', 'Screen')
 CoordMode('Mouse', 'Screen')
+sendMode("event")
+DetectHiddenWindows(1)
 ;==================================
-TraySetIcon('images/logo.ico')
+TraySetIcon('images/birb.ico')
 ;==================================
 pToken := Gdip_Startup(), autoNeonberry := 0, neonberryX := 0, neonberryY := 0
 OnExit((*) => (closefunction()), -1)
-OnError (e, mode) => (mode = "Return") ? -1 : 0
+OnMessage(0x4A, WM_COPYDATA)
+;OnError (e, mode) => (mode = "Return") ? -1 : 0
 stopToggle(*) {
 	global stopping := true
 }
-if A_ScreenDPI !== 96
+if A_ScreenDPI != 96
 	throw Error("This macro requires a display-scale of 100%")
-traySetIcon(".\nm_image_assets\auryn.ico")
-sendMode("event")
 getConfig() {
 	global
 	local k, v, p, c, i, section, key, value, inipath, config, f, ini
@@ -91,6 +93,13 @@ getConfig() {
 		extrasettings: {
 			mythicStop: 0,
 			giftedStop: 0,
+		},
+		discord: {
+			WebhookURL: "",
+			BotToken: "",
+			UserID: "",
+			ChannelID: "",
+			discordMode: 0,
 		}
 	}
 	for i, section in config.OwnProps()
@@ -118,6 +127,10 @@ getConfig() {
 	}
 	(f := FileOpen(inipath, "w")).Write(ini), f.Close()
 }
+
+
+
+^t::msgbox SendMessage(0x7001,,,,"discord.ahk ahk_class AutoHotkey")
 ;===Dimensions===
 w := 500, h := 437
 ;===Bee Array===
@@ -125,6 +138,8 @@ beeArr := ["Bomber", "Brave", "Bumble", "Cool", "Hasty", "Looker", "Rad", "Rasca
 mutationsArr := [{ name: "Ability", triggers: ["rate", "abil", "ity"], full: "AbilityRate" }, { name: "Gather", triggers: ["gath", "herAm"], full: "GatherAmount" }, { name: "Convert", triggers: ["convert", "vertAm"], full: "ConvertAmount" }, { name: "Instant", triggers: ["inst", "antConv"], full: "InstantConversion" }, { name: "Crit", triggers: ["crit", "chance"], full: "CriticalChance" }, { name: "Attack", triggers: ["attack", "att", "ack"], full: "Attack" }, { name: "Energy", triggers: ["energy", "rgy"], full: "Energy" }, { name: "Movespeed", triggers: ["movespeed", "speed", "move"], full: "MoveSpeed" },]
 extrasettings := [{ name: "mythicStop", text: "Stop on mythics" }, { name: "giftedStop", text: "Stop on gifteds" }]
 getConfig()
+;===Run Discord Subscript===
+Run('.\subscripts\discord.ahk "' BotToken '" "' UserID '" "' ChannelID '" "' WebhookURL '" "' discordMode '"',,, &pid)
 (bitmaps := Map()).CaseSense := 0
 #Include .\images\bitmaps.ahk
 startGui() {
@@ -132,7 +147,7 @@ startGui() {
 	local i, j, y, hBM, x
 	(mgui := Gui("+E" (0x00080000) " +OwnDialogs -Caption -DPIScale", "Auto-Jelly")).OnEvent("Close", closefunction)
 	mgui.Show("NA")
-	for i, j in [{ name: "move", options: "x0 y0 w" w " h36" }, { name: "selectall", options: "x" w - 330 " y220 w40 h18" }, { name: "mutations", options: "x" w - 170 " y220 w40 h18" }, { name: "close", options: "x" w - 40 " y5 w28 h28" }, { name: "roll", options: "x10 y" h - 42 " w" w - 56 " h30" }, { name: "help", options: "x" w - 40 " y" h - 42 " w28 h28" }, { name: "neonberry", options: "x10 y" h - 80 " w" w / 2 - 14 " h30" }]
+	for i, j in [{ name: "move", options: "x0 y0 w" w " h36" }, { name: "selectall", options: "x" w - 330 " y220 w40 h18" }, { name: "mutations", options: "x" w - 170 " y220 w40 h18" }, { name: "close", options: "x" w - 40 " y5 w28 h28" }, { name: "roll", options: "x10 y" h - 42 " w" w - 56 " h30" }, { name: "help", options: "x" w - 40 " y" h - 42 " w28 h28" }, { name: "neonberry", options: "x10 y" h - 80 " w" w / 2 - 14 " h30" }, { name: "discord", options: "x" w / 2 + 4 " y" h - 80 " w" w / 2 - 14 " h30" }]
 		mgui.AddText("v" j.name " " j.options)
 	for i, j in beeArr {
 		y := (A_Index - 1) // 8 * 1
@@ -235,9 +250,11 @@ DrawGUI() {
 		Gdip_FillRoundedRectanglePath(G, brush := Gdip_BrushCreateSolid("0x30FEC6DF"), w - 40, h - 42, 30, 30, 10), Gdip_DeleteBrush(brush)
 	if hovercontrol = "neonberry"
 		Gdip_FillRoundedRectanglePath(G, brush := Gdip_BrushCreateSolid("0x30FEC6DF"), 10, h - 80, w / 2 - 14, 30, 10), Gdip_DeleteBrush(brush)
+	if hovercontrol = "discord"
+		Gdip_FillRoundedRectanglePath(G, brush := Gdip_BrushCreateSolid("0x30FEC6DF"), w / 2 + 4, h - 80, w / 2 - 14, 30, 10), Gdip_DeleteBrush(brush)
 	Gdip_TextToGraphics(G, "Roll!", "x10 y" h - 40 " Center vCenter s15 c" (brush := Gdip_BrushCreateSolid("0xFFFEC6DF")), "Comic Sans MS", w - 56, 28)
 	Gdip_TextToGraphics(G, "Auto-neonberry: " (autoNeonberry ? "On" : "Off"), "x10 y" h - 80 " Center vCenter s15 c" brush, "Comic Sans MS", w / 2 - 14, 28)
-	Gdip_TextToGraphics(G, "cool feature coming soon™", "x" w / 2 + 4 " y" h - 80 " Center vCenter s15 c" brush, "Comic Sans MS", w / 2 - 14, 28)
+	Gdip_TextToGraphics(G, "Discord Settings", "x" w / 2 + 4 " y" h - 80 " Center vCenter s15 c" brush, "Comic Sans MS", w / 2 - 14, 28)
 	Gdip_TextToGraphics(G, "?", "x" w - 39 " y" h - 40 " Center vCenter s15 c" brush, "Comic Sans MS", 30, 28), Gdip_DeleteBrush(brush)
 	Gdip_DrawRoundedRectanglePath(G, pen := Gdip_CreatePen("0xFFFEC6DF", 4), 10, h - 42, w - 56, 30, 10)
 	Gdip_DrawRoundedRectanglePath(G, pen, 10, h - 82, w / 2 - 14, 30, 10)
@@ -287,7 +304,8 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
 			}
 			else
 				autoNeonberry := 0, neonberryX := 0, neonberryY := 0
-
+		case "discord":
+			discordGUI()
 		default:
 			if mutations
 				IniWrite(%mgui[ctrl].name% ^= 1, ".\settings\mutations.ini", "mutations", mgui[ctrl].name)
@@ -392,70 +410,76 @@ blc_start() {
 		ActivateRoblox()
 		click windowX + Round(0.5 * windowWidth + 10) " " windowY + yOffset + Round(0.4 * windowHeight + 230)
 		sleep 600
-		pBitmap := Gdip_BitmapFromScreen(windowX + 0.5 * windowWidth - 155 "|" windowY + yOffset + 0.425 * windowHeight - 200 "|" 320 "|" 140)
-		if mythicStop
-			for i, j in ["Buoyant", "Fuzzy", "Precise", "Spicy", "Tadpole", "Vector"]
+		if detect()
+			break
+		detect() {
+			pBitmap := Gdip_BitmapFromScreen(windowX + 0.5 * windowWidth - 155 "|" windowY + yOffset + 0.425 * windowHeight - 200 "|" 320 "|" 140)
+			if mythicStop
+				for i, j in ["Buoyant", "Fuzzy", "Precise", "Spicy", "Tadpole", "Vector"]
+					if Gdip_ImageSearch(pBitmap, bitmaps["-" j]) || Gdip_ImageSearch(pBitmap, bitmaps["+" j]) {
+						Gdip_DisposeImage(pBitmap)
+						msgbox "Found a myhic bee!", "Auto-Jelly", 0x40040
+						return 1
+					}
+			if giftedStop
+				for i, j in beeArr {
+					if Gdip_ImageSearch(pBitmap, bitmaps["+" j]) {
+						Gdip_DisposeImage(pBitmap)
+						msgbox "Found a gifted bee!", "Auto-Jelly", 0x40040
+						return 1
+					}
+				}
+			found := 0
+			for i, j in selectedBees {
 				if Gdip_ImageSearch(pBitmap, bitmaps["-" j]) || Gdip_ImageSearch(pBitmap, bitmaps["+" j]) {
-					Gdip_DisposeImage(pBitmap)
-					msgbox "Found a myhic bee!", "Auto-Jelly", 0x40040
-					break 2
-				}
-		if giftedStop
-			for i, j in beeArr {
-				if Gdip_ImageSearch(pBitmap, bitmaps["+" j]) {
-					Gdip_DisposeImage(pBitmap)
-					msgbox "Found a gifted bee!", "Auto-Jelly", 0x40040
-					break 2
-				}
-			}
-		found := 0
-		for i, j in selectedBees {
-			if Gdip_ImageSearch(pBitmap, bitmaps["-" j]) || Gdip_ImageSearch(pBitmap, bitmaps["+" j]) {
-				if (!mutations || !ocr_enabled || !selectedMutations.length) {
-					Gdip_DisposeImage(pBitmap)
-					if msgbox("Found a match!`nDo you want to keep this?", "Auto-Jelly!", 0x40024) = "Yes"
-						break 2
-					else
-						continue 2
-				}
-				found := 1
-				break
-			}
-		}
-		Gdip_DisposeImage(pBitmap)
-		pBitmap := Gdip_BitmapFromScreen(windowX + Round(0.5 * windowWidth - 320) "|" windowY + yOffset + Round(0.4 * windowHeight + 17) "|210|90")
-		if !found {
-            if autoNeonberry && !Gdip_PixelSearch(pBitmap, 0xFF276339) {
-                Click(windowX + Round(0.5 * windowWidth) " " windowY + yOffset + Round(0.5 * windowHeight)) ; close the bee info
-                placeNeonberry()
-            }
-			Gdip_DisposeImage(pBitmap)
-			continue
-		}
-		pEffect := Gdip_CreateEffect(5, -60, 30)
-		Gdip_BitmapApplyEffect(pBitmap, pEffect)
-		Gdip_DisposeEffect(pEffect)
-		hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap)
-		pIRandomAccessStream := HBitmapToRandomAccessStream(hBitmap)
-		text := RegExReplace(ocr(pIRandomAccessStream), "i)([\r\n\s]|mutation)*")
-		found := 0
-		for i, j in selectedMutations
-			for k, trigger in j.triggers
-				if inStr(text, trigger) {
+					if (!mutations || !ocr_enabled || !selectedMutations.length) {
+						Gdip_DisposeImage(pBitmap)
+						if msgbox("Found a match!`nDo you want to keep this?", "Auto-Jelly!", 0x40024) = "Yes"
+							return 1
+						else
+							return 0
+					}
 					found := 1
 					break
 				}
-		if !found {
-            if autoNeonberry && !Gdip_PixelSearch(pBitmap, 0xFF276339) {
-                Click(windowX + Round(0.5 * windowWidth) " " windowY + yOffset + Round(0.5 * windowHeight)) ; close the bee info
-                placeNeonberry()
-            }
-            Gdip_DisposeImage(pBitmap)
-            continue
-        }
-        Gdip_DisposeImage(pBitmap)
-		if msgbox("Found a match!`nDo you want to keep this?", "Auto-Jelly!", 0x40024) = "Yes"
-			break
+			}
+			Gdip_DisposeImage(pBitmap)
+			pBitmap := Gdip_BitmapFromScreen(windowX + Round(0.5 * windowWidth - 320) "|" windowY + yOffset + Round(0.4 * windowHeight + 17) "|210|90")
+			if !found {
+				if autoNeonberry && !Gdip_PixelSearch(pBitmap, 0xFF276339) {
+					Click(windowX + Round(0.5 * windowWidth) " " windowY + yOffset + Round(0.5 * windowHeight)) ; close the bee info
+					placeNeonberry()
+				}
+				Gdip_DisposeImage(pBitmap)
+				return detect()
+			}
+			pEffect := Gdip_CreateEffect(5, -60, 30)
+			Gdip_BitmapApplyEffect(pBitmap, pEffect)
+			Gdip_DisposeEffect(pEffect)
+			hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap)
+			pIRandomAccessStream := HBitmapToRandomAccessStream(hBitmap)
+			text := RegExReplace(ocr(pIRandomAccessStream), "i)([\r\n\s]|mutation)*")
+			found := 0
+			for i, j in selectedMutations
+				for k, trigger in j.triggers
+					if inStr(text, trigger) {
+						found := 1
+						break
+					}
+			if !found {
+				if autoNeonberry && !Gdip_PixelSearch(pBitmap, 0xFF276339) {
+					Click(windowX + Round(0.5 * windowWidth) " " windowY + yOffset + Round(0.5 * windowHeight)) ; close the bee info
+					placeNeonberry()
+				}
+				Gdip_DisposeImage(pBitmap)
+				return detect()
+			}
+			Gdip_DisposeImage(pBitmap)
+			SendMessage(0x7001, 0, 0, "ahk_pid" pid)
+			if msgbox("Found a match!`nDo you want to keep this?", "Auto-Jelly!", 0x40024) = "Yes"
+				return 1
+			return 0
+		}
 	}
 	hotkey "~*esc", stopToggle, "Off"
 	mgui.show()
@@ -464,6 +488,9 @@ find(arr, function) {
 	for i, j in arr
 		if function(j)
 			return j
+}
+KeepReplace(*) {
+	MsgBox
 }
 closeFunction(*) {
 	global xPos, yPos
@@ -548,3 +575,170 @@ HookProc(ncode, wParam, lParam, extraParam?) {
 	}
 }
 
+
+WM_COPYDATA(wParam, lParam, msg, hwnd) {
+	global WebhookURL, BotToken, UserID, ChannelID, discordMode
+	static vars := ["discordMode", "WebhookURL", "BotToken", "UserID", "ChannelID"]
+	str := StrGet(NumGet(lParam + 2 * A_PtrSize, "ptr"), "UTF-8")
+	IniWrite(%vars[wParam]% := str, ".\settings\mutations.ini", "Discord", vars[wParam])
+}
+
+discordGUI(*) {
+	static dGUIpid:=0
+	if dGUIpid
+		ProcessClose(dGUIpid)
+	script :=
+	(
+	'
+#SingleInstance Force
+#Include lib\Gdip_All.ahk
+DetectHiddenWindows(1)
+pToken := Gdip_Startup()
+
+(discordGUI := Gui("+E" 0x00000080|0x00000008|0x00080000 " +OwnDialogs -DPIScale -Caption")).OnEvent("Close", CloseFunc)
+discordGUI.Show("NA")
+discordMode:= ' discordMode '
+WebhookURL := "' WebhookURL '", BotToken := "' BotToken '", UserID := "' UserID '", ChannelID := "' ChannelID '"
+(bitmaps := Map()).CaseSense := 0
+#Include .\images\bitmaps.ahk
+w:=300, h:=300
+hbm := CreateDIBSection(w, h)
+hdc := CreateCompatibleDC()
+obm := SelectObject(hdc, hbm)
+g := Gdip_GraphicsFromHDC(hdc)
+Gdip_SetSmoothingMode(g, 4)
+Gdip_SetPixelOffsetMode(g, 2)
+update:=UpdateLayeredWindow.Bind(discordGUI.hwnd, hdc)
+update(A_ScreenWidth//2-w//2, A_ScreenHeight//2-h//2, w, h-(!discordMode)*70)
+controls := [
+    {x: 0, y: 0, w: w-40, h: 40, name: "title", discordMode: -1},
+    {x: w-40, y: 0, w: 40, h: 40, name: "close", discordMode: -1},
+    {x: w-40, y: 74, w: 20, h: 22, name: "pasteWebhook", discordMode: -1},
+    {x: w-40, y: 144, w: 20, h: 22, name: "pasteUserID", discordMode: -1},
+    {x: w-40, y: 214, w: 20, h: 22, name: "pasteChannelID", discordMode: 1},
+    {x: 10, y: h-(!discordMode)*70 - 45, w: 30, h: 30, name: "advancedSettings", discordMode: -1}
+]
+for i in controls {
+    discordGUI.Add("Text", "x" i.x " y" i.y " w" i.w " h" i.h " v" i.name (i.discordMode = !discordMode ? " hidden" : ""))
+}
+drawGUI()
+
+drawGUI() {
+    global
+    local region, brush, pBrush, pPen
+    Gdip_GraphicsClear(G)
+	Gdip_FillRoundedRectanglePath(G, brush := Gdip_BrushCreateSolid(0xFF131416), 2, 2, w - 4, h  - (!discordMode)*70 - 4, 20), Gdip_DeleteBrush(brush)
+	region := Gdip_GetClipRegion(G)
+	Gdip_SetClipRect(G, 2, 21, w - 2, 30, 4)
+	Gdip_FillRoundedRectanglePath(G, brush := Gdip_BrushCreateSolid("0xFFFEC6DF"), 2, 2, w - 4, 40, 20)
+	Gdip_SetClipRegion(G, region)
+	Gdip_FillRectangle(G, brush, 2, 20, w - 4, 14)
+	Gdip_DeleteBrush(brush), Gdip_DeleteRegion(region)
+    Gdip_TextToGraphics(G, "Discord Settings", "s20 x10 y5 c" (pBrush:=Gdip_BrushCreateSolid("0xFF000000")), "Comic Sans MS", w-20, 30), Gdip_DeleteBrush(pBrush)
+	Gdip_DrawImage(G, bitmaps["close"], w - 40, 5, 28, 28)
+
+    for i in [discordMode = 0 ? "Webhook URL" : "Bot Token", "User ID", "Channel ID"] {
+        pBrush:=Gdip_BrushCreateSolid("0xFFFEC6DF")
+        Gdip_TextToGraphics(G, i, "s18 x10 y" 45+(a_index-1)*70 " c" pBrush , "Comic Sans MS", w-20, 30)
+        Gdip_TextToGraphics(G, %(StrReplace(i, " "))% || "Paste " i, "s11 x12 y" 71+(A_Index-1)*70 " Center vCenter c" pBrush, "Comic Sans MS", w-24, 28)
+        , pPen:=Gdip_CreatePenFromBrush(pBrush, 2), Gdip_DeleteBrush(pBrush)
+        
+        pBrush := Gdip_CreateLineBrush(w-200, 70*A_Index, w-10, 70*A_Index-1, 0, 0xFF131416, 0)
+        Gdip_FillRoundedRectanglePath(G, pBrush, w-200, 70*A_Index-1, 190, 30, 10), Gdip_DeleteBrush(pBrush)
+        Gdip_DrawRoundedRectanglePath(G, pPen, 10, 70*A_Index-1, w-20, 30,10), Gdip_DeletePen(pPen)
+    } until discordMode = 0 && A_Index = 2
+    ;? Create a Paste Icon
+
+    pBrush:=Gdip_BrushCreateSolid("0xFFFEC6DF")
+    PasteIcon(w-40, 74, pBrush)
+    PasteIcon(w-40, 144, pBrush)
+    (discordMode && PasteIcon(w-40, 214, pBrush))
+    toggleY := h - (!discordMode)*70 - 45
+    pPen := Gdip_CreatePenFromBrush(pBrush, 2)
+    Gdip_DrawRoundedRectanglePath(G, pPen, 10, toggleY, 30, 30,10)
+    Gdip_DeletePen(pPen)
+    Gdip_TextToGraphics(G, "Advanced Settings", "s20 x50 y" toggleY " Near vCenter c" pBrush , "Comic Sans MS", w-60, 30)
+    if discordMode
+        Gdip_FillRoundedRectanglePath(G, pBrush, 13, toggleY+3, 24, 24, 10)
+    Gdip_DeleteBrush(pBrush)
+    Update()
+    static _ := (OnMessage(0x201, WM_LBUTTONDOWN))
+    PasteIcon(x, y, pBrush?) {
+        if !IsSet(pBrush)
+            pBrush := Gdip_BrushCreateSolid("0xFFFEC6DF")
+        pPen := Gdip_CreatePenFromBrush(pBrush, 1)
+        Gdip_DrawRoundedRectanglePath(G, pPen, x, y, 13, 18, 5)
+        Gdip_FillRoundedRectanglePath(G, pBrush, x+7, y+4, 13, 18, 5)
+        Gdip_DeletePen(pPen)
+    }
+}
+
+WM_LBUTTONDOWN(*) {
+    global discordMode, UserID, WebhookURL, h, BotToken, ChannelID
+    MouseGetPos(, ,&hwnd , &ctrl, 2)
+	if !ctrl || !(hwnd = discordGUI.hwnd)
+		return
+    switch discordGUI[ctrl].name {
+        case "title":
+        PostMessage(0xA1, 2)
+        case "close":
+        while GetKeyState("LButton", "P")
+            sleep -1
+        mousegetpos , , , &ctrl2, 2
+        if ctrl = ctrl2
+            PostMessage(0x0112, 0xF060)
+        case "pasteWebhook":
+            regex0 := "https:\/\/discord\.com\/api\/webhooks\/\d+\/[a-zA-Z\d_-]+", regex1 := "[MN][a-zA-Z\d]+\.[\w-]{6}\.[\w-]+"
+            if !(A_Clipboard ~= regex%discordMode%)
+                return MsgBox("Invalid " (discordMode = 0 ? "Webhook URL" : "Bot Token"), "Error", "0x40010")
+            %(discordMode = 0 ? "WebhookURL" : "BotToken")% := A_Clipboard
+			updateValues(discordMode = 0 ? "WebhookURL" : "BotToken")
+        case "pasteUserID":
+            if !(A_Clipboard ~= "\d{17,19}")
+                return MsgBox("Invalid User ID", "Error", "0x40010")
+            UserID := A_Clipboard
+			updateValues("UserID")
+        case "pasteChannelID":
+            if !(A_Clipboard ~= "\d{17,19}")
+                return MsgBox("Invalid Channel ID", "Error", "0x40010")
+            ChannelID := A_Clipboard
+			updateValues("ChannelID")
+        case "advancedSettings":
+            discordMode ^= 1
+            discordGUI["advancedSettings"].move(, h - (!discordMode) * 70 - 45)
+            discordGUI["pasteChannelID"].visible := discordMode
+            update(,,w,h - (!discordMode)*70)
+            updateValues("discordMode")
+    }
+    drawGUI()
+}
+
+
+updateValues(var) {
+    ;use WM_COPYDATA to send the values to the other script
+    static vars := Map("discordMode", 1, "WebhookURL", 2, "BotToken", 3, "UserID", 4, "ChannelID", 5)
+    buf := Buffer(3 * A_PtrSize, 0)
+    NumPut("ptr", (StrLen(%var%) + 1), "ptr", AStrPtr(%var%), buf, A_PtrSize)
+    if WinExist("auto-jelly.ahk ahk_class AutoHotkey")
+        SendMessage(0x4A, vars[var], buf.Ptr)
+}
+
+CloseFunc(*) {
+    Gdip_Shutdown(pToken)
+    ExitApp()
+}
+AStrPtr(str) {
+    static Buf := Buffer(4, 0), _ := (
+    NumPut("uchar", 0x48, "uchar", 0x89, "uchar", 0xC8, "uchar", 0xC3, Buf),
+    DllCall("VirtualProtect", "ptr", buf, "ptr", buf.Size, "uint", 0x40, "uint*", 0)
+    `)
+    return DllCall(buf, "astr", str)
+}
+
+'
+	)
+	exec := ComObject("WScript.Shell").Exec(A_AhkPath " /force /script *")
+	exec.StdIn.Write(script)
+	exec.StdIn.Close()
+	return (dGUIpid:=exec.ProcessID)
+}
