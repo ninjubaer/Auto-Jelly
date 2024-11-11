@@ -130,7 +130,6 @@ getConfig() {
 
 
 
-^t::msgbox SendMessage(0x7001,,,,"discord.ahk ahk_class AutoHotkey")
 ;===Dimensions===
 w := 500, h := 437
 ;===Bee Array===
@@ -434,6 +433,7 @@ blc_start() {
 				if Gdip_ImageSearch(pBitmap, bitmaps["-" j]) || Gdip_ImageSearch(pBitmap, bitmaps["+" j]) {
 					if (!mutations || !ocr_enabled || !selectedMutations.length) {
 						Gdip_DisposeImage(pBitmap)
+						PostMessage(0x7001,,,,"discord.ahk ahk_class AutoHotkey")
 						if msgbox("Found a match!`nDo you want to keep this?", "Auto-Jelly!", 0x40024) = "Yes"
 							return 1
 						else
@@ -449,9 +449,11 @@ blc_start() {
 				if autoNeonberry && !Gdip_PixelSearch(pBitmap, 0xFF276339) {
 					Click(windowX + Round(0.5 * windowWidth) " " windowY + yOffset + Round(0.5 * windowHeight)) ; close the bee info
 					placeNeonberry()
+					placeJelly()
+					return detect()
 				}
 				Gdip_DisposeImage(pBitmap)
-				return detect()
+				return 0
 			}
 			pEffect := Gdip_CreateEffect(5, -60, 30)
 			Gdip_BitmapApplyEffect(pBitmap, pEffect)
@@ -475,12 +477,13 @@ blc_start() {
 				return detect()
 			}
 			Gdip_DisposeImage(pBitmap)
-			SendMessage(0x7001, 0, 0, "ahk_pid" pid)
+			PostMessage(0x7001,,,,"discord.ahk ahk_class AutoHotkey")
 			if msgbox("Found a match!`nDo you want to keep this?", "Auto-Jelly!", 0x40024) = "Yes"
 				return 1
 			return 0
 		}
 	}
+	Click windowX + Round(0.5 * windowWidth) " " windowY + yOffset + Round(0.5 * windowHeight)
 	hotkey "~*esc", stopToggle, "Off"
 	mgui.show()
 }
@@ -510,6 +513,7 @@ placeNeonberry() {
     if openInventory()
         sleep 300
     MouseMove(windowX + 30 , windowY + yOffset + 200)
+	sleep 100
     loop 50
         Send "{WheelDown 50}"
     msgbox "done"
@@ -524,6 +528,43 @@ placeNeonberry() {
             Send "{Click Down}"
             MouseMove neonberryX, neonberryY
             Send "{Click Up}"
+			sleep 200
+			Click windowX + 0.53 * windowWidth - 137, windowY + yOffset + 0.46*windowHeight-4
+            return 1
+        }
+        Gdip_DisposeImage(pBitmap)
+    }
+    openInventory(close:=0) {
+        pBitmap := Gdip_BitmapFromScreen(windowX "|" windowY+yOffset+70 "|70|70")
+        if (close && Gdip_ImageSearch(pBitmap, bitmaps["Inventory"], ,,,,, 2)) || (!close && !Gdip_ImageSearch(pBitmap, bitmaps["Inventory"], ,,,,, 2))
+            return(Click(windowX+30 " " windowY+yOffset+95), Gdip_DisposeImage(pBitmap), 1)
+        Gdip_DisposeImage(pBitmap)
+        return 0
+    }
+}
+placeJelly() {
+    ActivateRoblox()
+    GetRobloxClientPos(), yOffset:=GetYOffset()
+    if openInventory()
+        sleep 300
+    MouseMove(windowX + 30 , windowY + yOffset + 200)
+	sleep 100
+    loop 50
+        Send "{WheelDown 50}"
+    msgbox "done"
+    loop 25 {
+        Send "{WheelUp 50}"
+        sleep 500
+        pBitmap := Gdip_BitmapFromScreen(windowX "|" windowY+yOffset+175 "|80|" windowHeight - yOffset - 175)
+        if Gdip_ImageSearch(pBitmap, bitmaps["Neonberry"],&pos,,,,,2) {
+            Gdip_DisposeImage(pBitmap)
+            x:=SubStr(pos,1,InStr(pos, ",")-1), y:=SubStr(pos,InStr(pos, ",")+1)
+            MouseMove(windowX + x, windowY + yOffset + 175 + y)
+            Send "{Click Down}"
+            MouseMove neonberryX, neonberryY
+            Send "{Click Up}"
+			sleep 200
+			Click windowX + 0.53 * windowWidth - 137, windowY + yOffset + 0.46*windowHeight-4
             return 1
         }
         Gdip_DisposeImage(pBitmap)

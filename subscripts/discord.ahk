@@ -45,9 +45,11 @@ InteractionHandler(myInteraction) {
     if myInteraction.data.data.HasProp("custom_id") {
         if myInteraction.data.data.custom_id == "0" {
             WinActivate("Auto-Jelly!"), Send("n{Enter}")
+            myInteraction.reply({content: "Lets keep rolling!", flags: 64})
         }
         else if myInteraction.data.data.custom_id == "1" {
             WinActivate("Auto-Jelly!"), Send("y{Enter}")
+            myInteraction.reply({content: "Let's go! 🎉", flags: 64})
         }
     }
 }
