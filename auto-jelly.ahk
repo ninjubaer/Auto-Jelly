@@ -14,15 +14,29 @@
 #include %A_ScriptDir%\lib\Roblox.ahk
 #include %A_ScriptDir%\lib\Gdip_ImageSearch.ahk
 ;==================================
+SendMode("Event")
 CoordMode('Pixel', 'Screen')
 CoordMode('Mouse', 'Screen')
 ;==================================
 pToken := Gdip_Startup()
-OnExit((*) =>( Gdip_Shutdown(pToken), closefunction(), ExitApp() ), -1)
+OnExit((*) => (closefunction()), -1)
 OnError (e, mode) => (mode = "Return") ? -1 : 0
 stopToggle(*) {
 	global stopping := true
-} 
+}
+class __ArrEx extends Array {
+	static __New() {
+		Super.Prototype.includes := ObjBindMethod(this, 'includes')
+	}
+	static includes(arr, val) {
+		for i, j in arr {
+			if j = val
+				return i
+		}
+		return 0
+	}
+}
+
 if A_ScreenDPI !== 96
     throw Error("This macro requires a display-scale of 100%")
 traySetIcon(".\nm_image_assets\auryn.ico")
@@ -137,7 +151,7 @@ getConfig()
 startGui() {
 	global
 	local i,j,y,hBM,x
-	(mgui := Gui("+E" (0x00080000) " +OwnDialogs -Caption -DPIScale", "Auto-Jelly")).OnEvent("Close", closefunction)
+	(mgui := Gui("+E" (0x00080000) " +OwnDialogs -Caption -DPIScale", "Auto-Jelly")).OnEvent("Close", ExitApp)
 	mgui.Show("NA")
 	for i, j in [
 		{name:"move", options:"x0 y0 w" w " h36"},
@@ -296,7 +310,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
 }
 WM_MOUSEMOVE(wParam, lParam, msg, hwnd) {
 	global
-	local ctrl, hover_ctrl
+	local ctrl, hover_ctrl, tt := 0
 	MouseGetPos(,,,&ctrl,2)
 	if !ctrl || mgui["move"].hwnd = ctrl || mgui["close"].hwnd = ctrl
 		return
@@ -304,9 +318,13 @@ WM_MOUSEMOVE(wParam, lParam, msg, hwnd) {
 	hovercontrol := mgui[ctrl].name
 	hover_ctrl := mgui[ctrl].hwnd
 	DrawGUI()
-	while ctrl = hover_ctrl
+	while ctrl = hover_ctrl {
 		sleep(20),MouseGetPos(,,,&ctrl,2)
+		if A_Index > 120 && beeArr.includes(hovercontrol) && !tt
+			tt:=1,ToolTip(hovercontrol . " Bee")
+	}
 	hovercontrol := ""
+	ToolTip()
 	ReplaceSystemCursors()
 	DrawGUI()
 }
@@ -448,6 +466,7 @@ blc_start() {
 }
 closeFunction(*) {
 	global xPos, yPos
+	Gdip_Shutdown(pToken)
 	ReplaceSystemCursors()
 	try {
 		mgui.getPos(&xp, &yp)
