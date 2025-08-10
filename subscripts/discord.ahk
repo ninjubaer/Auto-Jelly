@@ -2,13 +2,14 @@
 #Requires AutoHotkey v2.0
 #Warn VarUnset, Off 
 ;=============INCLUDES=============
-#Include .\..\lib\DISCORD.AHK
-#Include .\..\lib\FormData.ahk
-#Include .\..\lib\Gdip_All.ahk
-#Include .\..\lib\JSON.ahk
-#Include .\..\lib\WebSockets.ahk
-#include .\..\lib\Roblox.ahk
-#include .\..\lib\DarkMsgbox.ahk
+#include %A_ScriptDir%/../lib/
+#Include Gdip_All.ahk
+#Include JSON.ahk
+#include Roblox.ahk
+#include DarkMsgbox.ahk
+#include DISCORD.ahk
+#Include EmbedBuilder.ahk
+#include AttachmentBuilder.ahk
 ;=============SETUP================
 CoordMode 'Mouse', 'Screen'
 CoordMode 'Pixel', 'Screen'
@@ -25,17 +26,17 @@ WebhookURL := A_Args[4]
 discordMode := A_Args[5]
 
 
-authorAttachment := AttachmentBuilder('.\..\images\birb.png')
+authorAttachment := Attachment.File('.\..\images\birb.png')
 author := {name: "Auto-Jelly", icon_url: authorAttachment.attachmentName}
 
 if discordMode {
-    Bot := client(513)
-    Bot.once("READY", (*)=>(Bot.rest.SendMessage(channelID, {embeds: [EmbedBuilder().setTitle("Bot is ready!").setAuthor(author).setTimeStamp()], files: [authorAttachment]})))
-    Bot.login(BotToken)
-    bot.on("Interaction_create", (obj)=>(myInteraction:=Interaction(Bot, obj), interactionHandler(myInteraction)))
+    Bot := Discord(513, {
+        onReady: (*)=>(Bot.rest.SendMessage(channelID, {embeds: [EmbedBuilder().setTitle("Bot is ready!").setAuthor(author).setTimeStamp()], files: [authorAttachment]})),
+        onInteraction_Create: (obj)=>(myInteraction:=Discord.Interaction(Bot, obj), interactionHandler(myInteraction)) 
+      }, BotToken)
 }
 else
-    webhook := WebHookBuilder(WebhookURL)
+    webhook := WebhookURL ? WebHookBuilder(WebhookURL) : 0
 
 
 
@@ -56,22 +57,22 @@ InteractionHandler(myInteraction) {
 
 KeepReplace(*) {
     if (!discordMode) {
-        attachment := AttachmentBuilder(pBitmap := Gdip_BitmapFromScreen())
+        img := Attachment.Bitmap(pBitmap := Gdip_BitmapFromScreen())
         obj := {}
-        obj.embeds := [EmbedBuilder().setTitle("Found a match!").setAuthor(author).setImage(attachment).setTimeStamp()]
-        obj.files := [attachment, authorAttachment]
+        obj.embeds := [EmbedBuilder().setTitle("Found a match!").setAuthor(author).setImage(img).setTimeStamp()]
+        obj.files := [img, authorAttachment]
         if userID
             obj.content := "<@" userID ">"
         webhook.send(obj)
         return
     }
     pBitmap:=Gdip_BitmapFromScreen()
-    attachment := AttachmentBuilder(pBitmap)
+    img := Attachment.Bitmap(pBitmap)
     actionRow := ActionRowBuilder().AddButton({style:ActionRowBuilder.ButtonStyles.Red, label: 'NO', disabled: false, custom_id: '0'}).AddButton({style:ActionRowBuilder.ButtonStyles.Green, label: 'YES', disabled: false, custom_id: '1'})
     Bot.rest.SendMessage('1207367046313283596', {
-        embeds: [EmbedBuilder().setTitle("Do you want to keep this?").setImage(attachment).setAuthor(author).setTimeStamp()],
+        embeds: [EmbedBuilder().setTitle("Do you want to keep this?").setImage(img).setAuthor(author).setTimeStamp()],
         components: [actionRow],
-        files: [attachment, authorAttachment],
+        files: [img, authorAttachment],
         content: userID ? "<@" userID ">" : ""
     })
 }

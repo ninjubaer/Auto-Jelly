@@ -138,7 +138,7 @@ mutationsArr := [{ name: "Ability", triggers: ["rate", "abil", "ity"], full: "Ab
 extrasettings := [{ name: "mythicStop", text: "Stop on mythics" }, { name: "giftedStop", text: "Stop on gifteds" }]
 getConfig()
 ;===Run Discord Subscript===
-Run('.\subscripts\discord.ahk "' BotToken '" "' UserID '" "' ChannelID '" "' WebhookURL '" "' discordMode '"',,, &pid)
+Run('"' A_AhkPath '" /script "' A_ScriptDir . '\subscripts\discord.ahk" "' BotToken '" "' UserID '" "' ChannelID '" "' WebhookURL '" "' discordMode '"',,, &pid)
 (bitmaps := Map()).CaseSense := 0
 #Include .\images\bitmaps.ahk
 startGui() {
